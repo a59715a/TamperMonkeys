@@ -102,35 +102,35 @@
         }
 
         // 抓服務項目
-        const serviceItemDiv = Array.from(shiftDetailOptionModals).find(div => div.textContent.includes('服務項目'));
-        if (serviceItemDiv) {
-            // 檢查是否已經插入過服務項目代碼
-            const existingServiceCodesDiv = Array.from(shiftDetailOptionModals).find(div => div.textContent.includes('服務項目代碼'));
-            if (existingServiceCodesDiv) {
-                console.log('服務項目代碼已存在，不重複插入');
-                return; // 如果已經存在，則不重複插入
-            }
+        // const serviceItemDiv = Array.from(shiftDetailOptionModals).find(div => div.textContent.includes('服務項目'));
+        // if (serviceItemDiv) {
+        //     // 檢查是否已經插入過服務項目代碼
+        //     const existingServiceCodesDiv = Array.from(shiftDetailOptionModals).find(div => div.textContent.includes('服務項目代碼'));
+        //     if (existingServiceCodesDiv) {
+        //         console.log('服務項目代碼已存在，不重複插入');
+        //         return; // 如果已經存在，則不重複插入
+        //     }
 
-            const serviceItems = serviceItemDiv.getElementsByTagName('div')[1].textContent;
-            // 使用正則表達式提取代碼，支援 BA05-1, BA17a, BA17d1, BA20(10712) 等格式
-            const serviceCodes = serviceItems.match(/[A-Z]{2}\d{2}(?:-\d+|[a-z]\d*|\(\d{5}\))?/g) || [];
-            // 排除AA開頭
-            const filteredServiceCodes = serviceCodes.filter(code => !code.startsWith('AA'));
-            // 找到打卡時間的 div
-            const AttendanceTimeDivIndex = Array.from(shiftDetailOptionModals).findIndex(div => div.textContent.includes('打卡時間'));
-            if (AttendanceTimeDivIndex !== -1) {
-                const newDiv = document.createElement('div');
-                newDiv.className = 'shift-detail-option-modal row';
-                newDiv.innerHTML = `
-                    <div class="col-xs-3">服務項目代碼</div>
-                    <div class="col-xs-8">${filteredServiceCodes.join(', ')}</div>
-                `;
-                shiftDetailOptionModals[AttendanceTimeDivIndex].parentNode.insertBefore(
-                    newDiv,
-                    shiftDetailOptionModals[AttendanceTimeDivIndex].nextSibling
-                );
-            }
-        }
+        //     const serviceItems = serviceItemDiv.getElementsByTagName('div')[1].textContent;
+        //     // 使用正則表達式提取代碼，支援 BA05-1, BA17a, BA17d1, BA20(10712) 等格式
+        //     const serviceCodes = serviceItems.match(/[A-Z]{2}\d{2}(?:-\d+|[a-z]\d*|\(\d{5}\))?/g) || [];
+        //     // 排除AA開頭
+        //     const filteredServiceCodes = serviceCodes.filter(code => !code.startsWith('AA'));
+        //     // 找到打卡時間的 div
+        //     const AttendanceTimeDivIndex = Array.from(shiftDetailOptionModals).findIndex(div => div.textContent.includes('打卡時間'));
+        //     if (AttendanceTimeDivIndex !== -1) {
+        //         const newDiv = document.createElement('div');
+        //         newDiv.className = 'shift-detail-option-modal row';
+        //         newDiv.innerHTML = `
+        //             <div class="col-xs-3">服務項目代碼</div>
+        //             <div class="col-xs-8">${filteredServiceCodes.join(', ')}</div>
+        //         `;
+        //         shiftDetailOptionModals[AttendanceTimeDivIndex].parentNode.insertBefore(
+        //             newDiv,
+        //             shiftDetailOptionModals[AttendanceTimeDivIndex].nextSibling
+        //         );
+        //     }
+        // }
     }
 
     // 設置事件監聽器
