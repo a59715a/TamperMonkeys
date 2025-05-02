@@ -27,8 +27,10 @@
      - [https://github.com/a59715a/TamperMonkeys/raw/refs/heads/main/%E9%95%B7%E7%85%A7%E5%B0%8F%E5%A5%B4%E9%9A%B8.user.js](https://github.com/a59715a/TamperMonkeys/raw/refs/heads/main/%E9%95%B7%E7%85%A7%E5%B0%8F%E5%A5%B4%E9%9A%B8.user.js)
      - 在彈出的 Tampermonkey 頁面中點擊「安裝」按鈕
 
-       ![1746200486477](image/ReadMe/1746200486477.png)方法二：手動安裝
-   - - 點擊 Tampermonkey 圖示
+       ![1746200486477](image/ReadMe/1746200486477.png)
+   - 方法二：手動安裝
+
+     - 點擊 Tampermonkey 圖示
      - 選擇「建立新腳本」
      - 將腳本內容複製貼上
      - 按 Ctrl + S 儲存
