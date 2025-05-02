@@ -2,7 +2,7 @@
 // @name         長照小奴隸
 // @namespace    http://tampermonkey.net/
 // @version      0.1
-// @description  自動辨識並填寫衛福部長照系統的驗證碼
+// @description  努力打工的小奴隸
 // @author       DDian
 // @match        https://csms.mohw.gov.tw/lcms/*
 // @grant        GM_xmlhttpRequest
