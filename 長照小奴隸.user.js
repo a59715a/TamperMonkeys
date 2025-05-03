@@ -28,11 +28,14 @@
     function initialize() {
         // 檢查是否在仁寶系統頁面
         if (window.location.href.includes('luna.compal-health.com')) {
-            SideBar();
-            if (window.location.href.includes('luna.compal-health.com/case/hcCaseShift/')) {
-                handleLunaPage();
-                return;
-            }
+            setTimeout(() => {
+                SideBar();
+            }, 1000);
+            handleLunaPage();
+            // if (window.location.href.includes('luna.compal-health.com/case/hcCaseShift/')) {
+            //     handleLunaPage();
+            //     return;
+            // }
         }
 
         // 檢查頁面是否包含登入區塊
