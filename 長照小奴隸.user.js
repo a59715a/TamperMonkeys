@@ -21,6 +21,8 @@
     const REFRESH_DELAY = 500; // 圖片刷新等待時間（毫秒）
     let lastProcessedSrc = ''; // 記錄最後處理的圖片來源
     let isProcessing = false; // 防止重複處理的標記
+    let SYSTEM_NAME = '長照小奴隸';
+    let isProcessingCalendarModal = false;
 
     // 主函數：初始化
     function initialize() {
@@ -32,7 +34,8 @@
 
         // 檢查頁面是否包含登入區塊
         const loginDiv = document.querySelector('div.login-way-title');
-        const isLoginPage = loginDiv && loginDiv.textContent.trim() === '帳號密碼登入';
+        // 檢查是否包含登入區塊 csms.mohw.gov.tw/lcms/
+        const isLoginPage = loginDiv && loginDiv.textContent.trim() === '帳號密碼登入' || window.location.href.includes('csms.mohw.gov.tw/lcms/');
 
         if (isLoginPage) {
             console.log('找到登入頁面，開始初始化...');
@@ -49,10 +52,26 @@
 
     // 處理仁寶系統頁面
     function handleLunaPage() {
-        const observer = new MutationObserver((mutations) => {
-            // 只在新增節點時才檢查
-            if (mutations.some(mutation => mutation.type === 'childList' && mutation.addedNodes.length > 0)) {
-                calendarModal();
+        console.log(SYSTEM_NAME, '開始處理仁寶系統頁面');
+        // 監聽所有 CalendarCard 被點擊 執行 processCalendarModal
+        document.addEventListener('click', function (e) {   
+            // 判斷點擊的元素或其所有父層是否有 Class 包含 "CalendarCard"
+            let target = e.target;
+            let searchCount = 0;
+            const MAX_SEARCH_DEPTH = 3;
+
+            while (target && target !== document && searchCount < MAX_SEARCH_DEPTH) {
+                if (target.classList) {
+                    const classList = Array.from(target.classList);
+                    if (classList.some(className => className.includes('CalendarCard'))) {
+                        setTimeout(() => {
+                            processCalendarModal();
+                        }, 0);
+                        break;
+                    }
+                }
+                target = target.parentNode;
+                searchCount++;
             }
         });
 
@@ -62,75 +81,62 @@
         });
     }
 
-    function calendarModal() {
+    function processCalendarModal() {
+        if (isProcessingCalendarModal) return; // 再加一道保險
+        isProcessingCalendarModal = true;
         const calendarModal = document.getElementById('calendarOptionModal');
-        // 如果calendarModal不存在或hidden，則不執行
-        if (!calendarModal || calendarModal.hidden) return;
+        if (!calendarModal || calendarModal.hidden) {
+            isProcessingCalendarModal = false;
+            console.log(SYSTEM_NAME, 'calendarOptionModal 不存在或隱藏');
+            return;
+        }
 
         // 抓出calendarModal裡面所有class="shift-detail-option-modal row"的div
         const shiftDetailOptionModals = calendarModal.getElementsByClassName('shift-detail-option-modal row');
-        // 檢查是否有打卡時間
-        const hasAttendanceTime = Array.from(shiftDetailOptionModals).some(div => div.textContent.includes('打卡時間'));
 
-        // 如果有打卡時間，則不執行
-        if (!hasAttendanceTime) {
-            const arrivalTimeDiv = Array.from(shiftDetailOptionModals).find(div => div.textContent.includes('抵達時間'));
-            const leaveTimeDiv = Array.from(shiftDetailOptionModals).find(div => div.textContent.includes('離開時間'));
+        const arrivalTimeDiv = Array.from(shiftDetailOptionModals).find(div => div.textContent.includes('抵達時間'));
+        const leaveTimeDiv = Array.from(shiftDetailOptionModals).find(div => div.textContent.includes('離開時間'));
 
-            if (arrivalTimeDiv && leaveTimeDiv) {
-                const attendanceTimeStart = arrivalTimeDiv.getElementsByTagName('div')[1].textContent.replaceAll(' ', '').trim();
-                const attendanceTime = arrivalTimeDiv.getElementsByTagName('div')[2].textContent.replaceAll('時數:', '').trim();
-                const attendanceTimeEnd = leaveTimeDiv.getElementsByTagName('div')[1].textContent
-                    .replaceAll('超出案家範圍', '')
-                    .replaceAll(' ', '').trim();
+        if (arrivalTimeDiv && leaveTimeDiv) {
+            let attendanceTimeStart = arrivalTimeDiv.getElementsByTagName('div')[1].textContent.replaceAll(' ', '').trim();
+            const attendanceTime = arrivalTimeDiv.getElementsByTagName('div')[2].textContent.replaceAll('時數:', '').trim();
+            let attendanceTimeEnd = leaveTimeDiv.getElementsByTagName('div')[1].textContent
+                .replaceAll('超出案家範圍', '')
+                .replaceAll(' ', '').trim();
+            let AfterWriteText = '';
+            if (attendanceTimeStart.includes('補登') || attendanceTimeEnd.includes('補登')) {
+                attendanceTimeStart = attendanceTimeStart.replaceAll('補登', '');
+                attendanceTimeEnd = attendanceTimeEnd.replaceAll('補登', '');
+                AfterWriteText = '<span class="label label-default" style="font-size: 8px; padding: 0.2em; background-color: rgb(220, 110, 32); margin-right: 5px;">補登</span>';
+            }
 
-                const serviceTimeDivIndex = Array.from(shiftDetailOptionModals).findIndex(div => div.textContent.includes('服務時段'));
-                if (serviceTimeDivIndex !== -1) {
-                    const newDiv = document.createElement('div');
-                    newDiv.className = 'shift-detail-option-modal row';
-                    newDiv.innerHTML = `
-                        <div class="col-xs-3">打卡時間</div>
-                        <div class="col-xs-4"> [${attendanceTimeStart} - ${attendanceTimeEnd}]</div>
-                        <div class="column-right col-xs-4">時數: ${attendanceTime}</div>
-                    `;
+            const newDiv = document.createElement('div');
+            newDiv.className = 'shift-detail-option-modal row my-custom-attendance-time';
+            newDiv.innerHTML = `
+                    <div class="col-xs-3">打卡時間</div>
+                    <div class="col-xs-4"> [${attendanceTimeStart} - ${attendanceTimeEnd}]${AfterWriteText}</div>
+                    <div class="column-right col-xs-4">時數: ${attendanceTime}</div>
+                `;
+            const serviceTimeDivIndex = Array.from(shiftDetailOptionModals).findIndex(div => div.textContent.includes('服務時段'));
+            if (serviceTimeDivIndex !== -1) {
+                // 先檢查自訂的打卡時間div是否已存在
+                if (!calendarModal.querySelector('.my-custom-attendance-time')) {
+                    const existingAttendanceTimeDiv = Array.from(shiftDetailOptionModals).find(div => div.textContent.includes('打卡時間'));
+                    if (existingAttendanceTimeDiv) {
+                        existingAttendanceTimeDiv.remove();
+                    }
                     shiftDetailOptionModals[serviceTimeDivIndex].parentNode.insertBefore(
                         newDiv,
                         shiftDetailOptionModals[serviceTimeDivIndex].nextSibling
                     );
+                } else {
+                    // 替換
+                    const existingAttendanceTimeDiv = calendarModal.querySelector('.my-custom-attendance-time');
+                    existingAttendanceTimeDiv.replaceWith(newDiv);
                 }
             }
         }
-
-        // 抓服務項目
-        // const serviceItemDiv = Array.from(shiftDetailOptionModals).find(div => div.textContent.includes('服務項目'));
-        // if (serviceItemDiv) {
-        //     // 檢查是否已經插入過服務項目代碼
-        //     const existingServiceCodesDiv = Array.from(shiftDetailOptionModals).find(div => div.textContent.includes('服務項目代碼'));
-        //     if (existingServiceCodesDiv) {
-        //         console.log('服務項目代碼已存在，不重複插入');
-        //         return; // 如果已經存在，則不重複插入
-        //     }
-
-        //     const serviceItems = serviceItemDiv.getElementsByTagName('div')[1].textContent;
-        //     // 使用正則表達式提取代碼，支援 BA05-1, BA17a, BA17d1, BA20(10712) 等格式
-        //     const serviceCodes = serviceItems.match(/[A-Z]{2}\d{2}(?:-\d+|[a-z]\d*|\(\d{5}\))?/g) || [];
-        //     // 排除AA開頭
-        //     const filteredServiceCodes = serviceCodes.filter(code => !code.startsWith('AA'));
-        //     // 找到打卡時間的 div
-        //     const AttendanceTimeDivIndex = Array.from(shiftDetailOptionModals).findIndex(div => div.textContent.includes('打卡時間'));
-        //     if (AttendanceTimeDivIndex !== -1) {
-        //         const newDiv = document.createElement('div');
-        //         newDiv.className = 'shift-detail-option-modal row';
-        //         newDiv.innerHTML = `
-        //             <div class="col-xs-3">服務項目代碼</div>
-        //             <div class="col-xs-8">${filteredServiceCodes.join(', ')}</div>
-        //         `;
-        //         shiftDetailOptionModals[AttendanceTimeDivIndex].parentNode.insertBefore(
-        //             newDiv,
-        //             shiftDetailOptionModals[AttendanceTimeDivIndex].nextSibling
-        //         );
-        //     }
-        // }
+        isProcessingCalendarModal = false;
     }
 
     // 設置事件監聽器
@@ -165,6 +171,8 @@
                 // 按鈕點擊時不需要做任何事，因為圖片變化會觸發 MutationObserver
             });
         }
+
+
     }
 
     // 處理驗證碼
