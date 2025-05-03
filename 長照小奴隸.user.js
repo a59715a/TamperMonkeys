@@ -88,7 +88,7 @@
                     if (!isResizing) return;
 
                     const width = startWidth + (e.clientX - startX);
-                    if (width >= 200 && width <= 900) { // 限制最小和最大寬度
+                    if (width >= 200 && width <= 1500) { // 限制最小和最大寬度
                         sidebar.style.width = `${width}px`;
                     }
                 });
