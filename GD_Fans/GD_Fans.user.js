@@ -11,15 +11,17 @@
 
 (function () {
     'use strict';
+
+
+    // 套用自動選票網址
     const kktixSelectTicket = [
         'https://kktix.com/events/58652d0a/registrations/new', // GD Fans
         'https://kktix.com/events/pow33250604/registrations/new', // test
     ]
-
+    // 自動選票
     if (kktixSelectTicket.includes(window.location.href)) {
-
-
-
+        const RETRY_TIMEOUT = 300; // 重試間隔毫秒數 目前應該沒屁用 應該是改好玩的
+        const CHECK_INTERVAL = 1000; // 檢查票券的間隔毫秒數
         // 目標票種配置
         const targetTickets = [
             // {
@@ -168,13 +170,13 @@
         if (typeof TIXGLOBAL === 'undefined') {
             window.TIXGLOBAL = {
                 queueApi: {
-                    retry_timeout: "10"
+                    retry_timeout: RETRY_TIMEOUT.toString()
                 }
             };
             updateTaskStatus('init', 0, 'completed');
         } else if (TIXGLOBAL.queueApi) {
             console.log('原始 retry_timeout:', TIXGLOBAL.queueApi.retry_timeout);
-            TIXGLOBAL.queueApi.retry_timeout = "10";
+            TIXGLOBAL.queueApi.retry_timeout = RETRY_TIMEOUT.toString();
             console.log('修改後 retry_timeout:', TIXGLOBAL.queueApi.retry_timeout);
             updateTaskStatus('init', 0, 'completed');
         }
@@ -182,9 +184,9 @@
         // 監聽 TIXGLOBAL 的變化
         const observer = new MutationObserver((mutations) => {
             if (window.TIXGLOBAL && window.TIXGLOBAL.queueApi) {
-                if (window.TIXGLOBAL.queueApi.retry_timeout !== "10") {
-                    console.log('檢測到 retry_timeout 被重置，重新設置為 10');
-                    window.TIXGLOBAL.queueApi.retry_timeout = "10";
+                if (window.TIXGLOBAL.queueApi.retry_timeout !== RETRY_TIMEOUT.toString()) {
+                    console.log(`檢測到 retry_timeout 被重置，重新設置為 ${RETRY_TIMEOUT}`);
+                    window.TIXGLOBAL.queueApi.retry_timeout = RETRY_TIMEOUT.toString();
                 }
             }
         });
@@ -386,7 +388,7 @@
         }
 
         // 每秒執行一次檢查
-        setInterval(selectTickets, 1000);
+        setInterval(selectTickets, CHECK_INTERVAL);
 
         // 監聽頁面變化
         console.log('設置頁面變化監聽器');
