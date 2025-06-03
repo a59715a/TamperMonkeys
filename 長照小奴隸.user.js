@@ -2,9 +2,10 @@
 // @name         長照小奴隸
 // @namespace    http://tampermonkey.net/
 // @version      0.1
-// @description  自動辨識並填寫衛福部長照系統的驗證碼
+// @description  努力打工的小奴隸
 // @author       DDian
 // @match        https://csms.mohw.gov.tw/lcms/*
+// @match        https://luna.compal-health.com/*
 // @grant        GM_xmlhttpRequest
 // @connect      api.hlddian.com
 // @updateURL    https://github.com/a59715a/ltc-slave/raw/refs/heads/main/ltc-slave.user.js
@@ -20,12 +21,27 @@
     const REFRESH_DELAY = 500; // 圖片刷新等待時間（毫秒）
     let lastProcessedSrc = ''; // 記錄最後處理的圖片來源
     let isProcessing = false; // 防止重複處理的標記
+    let SYSTEM_NAME = '長照小奴隸';
+    let isProcessingCalendarModal = false;
 
     // 主函數：初始化
     function initialize() {
+        // 檢查是否在仁寶系統頁面
+        if (window.location.href.includes('luna.compal-health.com')) {
+            setTimeout(() => {
+                SideBar();
+            }, 1000);
+            handleLunaPage();
+            // if (window.location.href.includes('luna.compal-health.com/case/hcCaseShift/')) {
+            //     handleLunaPage();
+            //     return;
+            // }
+        }
+
         // 檢查頁面是否包含登入區塊
         const loginDiv = document.querySelector('div.login-way-title');
-        const isLoginPage = loginDiv && loginDiv.textContent.trim() === '帳號密碼登入';
+        // 檢查是否包含登入區塊 csms.mohw.gov.tw/lcms/
+        const isLoginPage = loginDiv && loginDiv.textContent.trim() === '帳號密碼登入' || window.location.href.includes('csms.mohw.gov.tw/lcms/');
 
         if (isLoginPage) {
             console.log('找到登入頁面，開始初始化...');
@@ -38,6 +54,145 @@
         } else {
             console.log('未找到登入頁面，不執行初始化');
         }
+    }
+    // SideBar
+    function SideBar() {
+        // 添加 SideBar 拖曳調整寬度功能
+        const sidebar = document.querySelector('.SideBar');
+        if (sidebar) {
+            console.log(SYSTEM_NAME, '找到 SideBar 元素');
+            const resizer = document.createElement('div');
+            resizer.className = 'sidebar-resizer';
+            resizer.style.cssText = `
+                    width: 5px;
+                    height: 100%;
+                    background: #ccc;
+                    cursor: col-resize;
+                    position: absolute;
+                    right: 0;
+                    top: 0;
+                    z-index: 1000;
+                `;
+            sidebar.style.position = 'relative';
+            sidebar.appendChild(resizer);
+
+            let isResizing = false;
+            let startX = 0;
+            let startWidth = 0;
+
+            resizer.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                startX = e.clientX;
+                startWidth = sidebar.offsetWidth;
+                document.body.style.cursor = 'col-resize';
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+
+                const width = startWidth + (e.clientX - startX);
+                if (width >= 200 && width <= 1500) { // 限制最小和最大寬度
+                    sidebar.style.width = `${width}px`;
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                isResizing = false;
+                document.body.style.cursor = '';
+            });
+        } else {
+            console.log(SYSTEM_NAME, '未找到 SideBar 元素');
+        }
+    }
+
+    // 處理仁寶系統頁面
+    function handleLunaPage() {
+        console.log(SYSTEM_NAME, '開始處理仁寶系統頁面');
+
+        // 監聽所有 CalendarCard 被點擊 執行 processCalendarModal
+        document.addEventListener('click', function (e) {
+            // 判斷點擊的元素或其所有父層是否有 Class 包含 "CalendarCard"
+            let target = e.target;
+            let searchCount = 0;
+            const MAX_SEARCH_DEPTH = 3;
+
+            while (target && target !== document && searchCount < MAX_SEARCH_DEPTH) {
+                if (target.classList) {
+                    const classList = Array.from(target.classList);
+                    if (classList.some(className => className.includes('CalendarCard'))) {
+                        setTimeout(() => {
+                            processCalendarModal();
+                        }, 0);
+                        break;
+                    }
+                }
+                target = target.parentNode;
+                searchCount++;
+            }
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    }
+
+    function processCalendarModal() {
+        if (isProcessingCalendarModal) return; // 再加一道保險
+        isProcessingCalendarModal = true;
+        const calendarModal = document.getElementById('calendarOptionModal');
+        if (!calendarModal || calendarModal.hidden) {
+            isProcessingCalendarModal = false;
+            console.log(SYSTEM_NAME, 'calendarOptionModal 不存在或隱藏');
+            return;
+        }
+
+        // 抓出calendarModal裡面所有class="shift-detail-option-modal row"的div
+        const shiftDetailOptionModals = calendarModal.getElementsByClassName('shift-detail-option-modal row');
+
+        const arrivalTimeDiv = Array.from(shiftDetailOptionModals).find(div => div.textContent.includes('抵達時間'));
+        const leaveTimeDiv = Array.from(shiftDetailOptionModals).find(div => div.textContent.includes('離開時間'));
+
+        if (arrivalTimeDiv && leaveTimeDiv) {
+            let attendanceTimeStart = arrivalTimeDiv.getElementsByTagName('div')[1].textContent.replaceAll(' ', '').trim();
+            const attendanceTime = arrivalTimeDiv.getElementsByTagName('div')[2].textContent.replaceAll('時數:', '').trim();
+            let attendanceTimeEnd = leaveTimeDiv.getElementsByTagName('div')[1].textContent
+                .replaceAll('超出案家範圍', '')
+                .replaceAll(' ', '').trim();
+            let AfterWriteText = '';
+            if (attendanceTimeStart.includes('補登') || attendanceTimeEnd.includes('補登')) {
+                attendanceTimeStart = attendanceTimeStart.replaceAll('補登', '');
+                attendanceTimeEnd = attendanceTimeEnd.replaceAll('補登', '');
+                AfterWriteText = '<span class="label label-default" style="font-size: 8px; padding: 0.2em; background-color: rgb(220, 110, 32); margin-right: 5px;">補登</span>';
+            }
+
+            const newDiv = document.createElement('div');
+            newDiv.className = 'shift-detail-option-modal row my-custom-attendance-time';
+            newDiv.innerHTML = `
+                        <div class="col-xs-3">打卡時間</div>
+                        <div class="col-xs-4"> [${attendanceTimeStart} - ${attendanceTimeEnd}]${AfterWriteText}</div>
+                        <div class="column-right col-xs-4">時數: ${attendanceTime}</div>
+                    `;
+            const serviceTimeDivIndex = Array.from(shiftDetailOptionModals).findIndex(div => div.textContent.includes('服務時段'));
+            if (serviceTimeDivIndex !== -1) {
+                // 先檢查自訂的打卡時間div是否已存在
+                if (!calendarModal.querySelector('.my-custom-attendance-time')) {
+                    const existingAttendanceTimeDiv = Array.from(shiftDetailOptionModals).find(div => div.textContent.includes('打卡時間'));
+                    if (existingAttendanceTimeDiv) {
+                        existingAttendanceTimeDiv.remove();
+                    }
+                    shiftDetailOptionModals[serviceTimeDivIndex].parentNode.insertBefore(
+                        newDiv,
+                        shiftDetailOptionModals[serviceTimeDivIndex].nextSibling
+                    );
+                } else {
+                    // 替換
+                    const existingAttendanceTimeDiv = calendarModal.querySelector('.my-custom-attendance-time');
+                    existingAttendanceTimeDiv.replaceWith(newDiv);
+                }
+            }
+        }
+        isProcessingCalendarModal = false;
     }
 
     // 設置事件監聽器
@@ -72,6 +227,8 @@
                 // 按鈕點擊時不需要做任何事，因為圖片變化會觸發 MutationObserver
             });
         }
+
+
     }
 
     // 處理驗證碼
