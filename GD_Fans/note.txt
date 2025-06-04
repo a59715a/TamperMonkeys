@@ -1,0 +1,58 @@
+第一步：
+選位子查詢剩餘量  直接用PostMan打   
+請在html 找 authenticity_token  然後urlEncode 串到 get param   (可重複使用)
+然後從html 結構找出你要的票券id 選票種的框框 html 有類似  id="ticket_885964" 數字就是票的id  填到body 並且寫你要的數量
+記得替換 餅乾(Cookie) "直接網頁操作訂一次" 去 `F12=>網路`裡面找到request複製成curl 貼到PostMan 就有了
+
+curl --location 'https://queue.kktix.com/queue/ofler?authenticity_token=jCCS2MU%2BjVR0As9%2B8cah11YZk0fvT75qmMyi3oQzGckVL65ZuG3LGT7c7tktYUQIIS%2Bp%2FkXpwgbkQgDqYqKBmQ%3D%3D' \
+--header 'accept: application/json, text/plain, */*' \
+--header 'accept-language: zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7' \
+--header 'content-type: text/plain' \
+--header 'origin: https://kktix.com' \
+--header 'priority: u=1, i' \
+--header 'referer: https://kktix.com/' \
+--header 'sec-ch-ua: "Google Chrome";v="137", "Chromium";v="137", "Not/A)Brand";v="24"' \
+--header 'sec-ch-ua-mobile: ?0' \
+--header 'sec-ch-ua-platform: "Windows"' \
+--header 'sec-fetch-dest: empty' \
+--header 'sec-fetch-mode: cors' \
+--header 'sec-fetch-site: same-site' \
+--header 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36' \
+--header 'Cookie: locale=zh-TW; _hjSessionUser_1979059=eyJpZCI6IjZhNTM5MzJiLWVlOGMtNTlhYS1hNGUxLTU1YjUzZGEyMGYwNSIsImNyZWF0ZWQiOjE3NDgyMzM4MTA1MzAsImV4aXN0aW5nIjp0cnVlfQ==; _gid=GA1.2.1388266864.1748914583; cf_clearance=euV8QelvzdQtouLX59t6F0yB1yAZla6DIUNO0qqEN84-1748914587-1.2.1.1-UQy5N2uFQct4Xvu1D1JfplV6Nwb9RkCAs5LqBKytW1Zp8tBN_MpNOpAIoToOS_BUoQHg5gFK4cPM4jyxSDMrRexGcWN_Ab7vD88pUn5wmMW9iy0azVZtDA2BgLAuHjoodQQ3Y9EIAxGHi7iC4Rl4GbKJxbX3dVYMj_PgQyWRHBBUfU8hRPYoN34Zb9NK8NvH1gYYw9NtkNM9RMBwcGWvG7ZlQyqXrFD4XRomBu7WAmeu1.S9oauYyVA1s_oLGgGgEYnnIHyhch2e1trw1wzsl5i4sfSO201iZrFJMTx6U2sZ_gOacg1JPtSFLAtUHi0XcZXwhH2O_oaxcvc03AYGK3Wdc.Ui80FC_21Yk63h0sVsvNZ.OmEHTHDapID_lqUh; kktix_session_token_v2=3ce8e2fc351cd90c4edf778be0ff1ca1; _cfuvid=XIUrHGcjOaGbq8rvQ2qloVvxOb9g.0aX1g2B8UvXcbs-1748999022405-0.0.1.1-604800000; _clck=1kluci2%7C2%7Cfwh%7C0%7C1972; _hjSession_1979059=eyJpZCI6IjQwMmMwZDYyLWMyYTMtNGU3OS1iY2Y1LTQ3ZjA0OTM5MmQxMiIsImMiOjE3NDkwMTY1MDMxOTksInMiOjAsInIiOjAsInNiIjowLCJzciI6MCwic2UiOjAsImZzIjowLCJzcCI6MH0=; _ga_WZBYP4N1ZG=GS2.2.s1749013236$o7$g1$t1749017765$j35$l0$h0; _clsk=4gzull%7C1749017767639%7C25%7C0%7Cj.clarity.ms%2Fcollect; _ga=GA1.1.1744041134.1748233809; _ga_LWVPBSFGF6=GS2.1.s1749013232$o7$g1$t1749017831$j60$l0$h0; _ga_SYRTJY65JB=GS2.1.s1749013232$o7$g1$t1749017894$j60$l0$h0' \
+--data '{
+    "tickets": [
+        {
+            "id": 885965,
+            "quantity": 1,
+            "invitationCodes": [],
+            "member_code": "",
+            "use_qualification_id": null
+        },
+        {
+            "id": 885966,
+            "quantity": 1,
+            "invitationCodes": [],
+            "member_code": "",
+            "use_qualification_id": null
+        }
+    ],
+    "currency": "TWD",
+    "recaptcha": {},
+    "agreeTerm": true
+}'
+
+如果成功會回傳
+{"token":"7b19fcb9-a4fc-4f6f-910f-df8e104cf3e5"}
+
+第二步：
+由token 取得訂單id
+https://queue.kktix.com/queue/token/7b19fcb9-a4fc-4f6f-910f-df8e104cf3e5
+
+回傳
+{"to_param":"146609640-ec3102dc93c4ce69ff98e2be4bc8dbb3"}
+
+第三步：
+訪問訂單
+https://kktix.com/events/ofler/registrations/146609640-ec3102dc93c4ce69ff98e2be4bc8dbb3#/booking
+
+

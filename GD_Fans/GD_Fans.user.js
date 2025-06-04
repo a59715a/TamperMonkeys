@@ -93,6 +93,34 @@
         return image;
     };
 
+    // 檢查售罄狀態並自動重新整理
+    function checkOutOfStock() {
+        const outOfStockElements = document.querySelectorAll('.register-status.register-status-OUT_OF_STOCK');
+
+        outOfStockElements.forEach(element => {
+            // 檢查元素的完整 class 名稱
+            const fullClassName = element.className;
+
+            // 如果完整 class 名稱正好是 "register-status register-status-OUT_OF_STOCK"
+            // 而不是包含 "hide register-status register-status-OUT_OF_STOCK"
+            if (fullClassName.trim() === 'register-status register-status-OUT_OF_STOCK') {
+                console.log('檢測到售罄狀態，準備重新整理頁面...');
+                // 設定隨機延遲 1-3 秒後重新整理，避免伺服器負載過高
+                let refreshDelay = 1000 + Math.random() * 2000;
+                refreshDelay = 0;
+                setTimeout(() => {
+                    console.log(`${refreshDelay.toFixed(0)}毫秒後重新整理頁面`);
+                    window.location.reload();
+                }, refreshDelay);
+                return; // 找到一個售罄元素就足夠觸發重新整理
+            }
+        });
+    }
+
+    // 定期檢查售罄狀態
+    const OUT_OF_STOCK_CHECK_INTERVAL = 500; // 每 500 毫秒檢查一次
+    setInterval(checkOutOfStock, OUT_OF_STOCK_CHECK_INTERVAL);
+
     // 套用自動選票網址
     const kktixSelectTicket = [
         'https://kktix.com/events/58652d0a/registrations/new', // GD Fans
