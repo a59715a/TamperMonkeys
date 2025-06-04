@@ -5,7 +5,7 @@
 // @description  auto select ticket 
 // @author       Your name
 // @match        https://kktix.com/events/58652d0a/registrations/new
-// @match        https://kktix.com/events/pow33250604/registrations/new
+// @match        https://kktix.com/events/rklrwd/registrations/new
 // @grant        none
 // ==/UserScript==
 
@@ -16,36 +16,37 @@
     // 套用自動選票網址
     const kktixSelectTicket = [
         'https://kktix.com/events/58652d0a/registrations/new', // GD Fans
-        'https://kktix.com/events/pow33250604/registrations/new', // test
+        'https://kktix.com/events/rklrwd/registrations/new', // test
     ]
     // 自動選票
     if (kktixSelectTicket.includes(window.location.href)) {
         const RETRY_TIMEOUT = 300; // 重試間隔毫秒數 目前應該沒屁用 應該是改好玩的
-        const CHECK_INTERVAL = 1000; // 檢查票券的間隔毫秒數
+        const CHECK_INTERVAL = 100; // 檢查票券的間隔毫秒數
         // 目標票種配置
         const targetTickets = [
-            // {
-            //     name: "黃2C",
-            //     price: "7,280",
-            //     quantity: 1,
-            //     alternatives: [
-            //         { name: "黃2B", price: "7,280" },
-            //         { name: "黃2D", price: "7,280" },
-            //         { name: "黃2A", price: "7,280" },
-            //         { name: "黃2E", price: "7,280" }
-            //     ]
-            // },
-            // {
-            //     name: "黃3C",
-            //     price: "800",
-            //     quantity: 1,
-            //     alternatives: [
-            //         { name: "黃3B", price: "800" },
-            //         { name: "黃3D", price: "800" },
-            //         { name: "黃3A", price: "800" },
-            //         { name: "黃3E", price: "800" }
-            //     ]
-            // },
+            {
+                name: "黃2C",
+                price: "7280",
+                quantity: 1,
+                alternatives: [
+                    { name: "黃2B", price: "7280" },
+                    { name: "黃2D", price: "7280" },
+                    { name: "黃2A", price: "7280" },
+                    { name: "黃2E", price: "7280" }
+                ]
+            },
+            {
+                name: "黃3C",
+                price: "800",
+                quantity: 1,
+                alternatives: [
+                    { name: "黃3H", price: "800" },
+                    { name: "黃3D", price: "800" },
+                    { name: "黃3E", price: "800" },
+                    { name: "黃3F", price: "800" },
+                    { name: "黃3G", price: "800" }
+                ]
+            },
             // {
             //     name: "VVIP 2",
             //     price: "8,960",
@@ -90,13 +91,21 @@
             //         { name: "黃4E", price: "5,580" }
             //     ]
             // },
-            {
-                name: "預售票",
-                price: "400",
-                quantity: 1,
-                alternatives: [
-                ]
-            },
+            // {
+            //     name: "早鳥預售單日",
+            //     price: "500",
+            //     quantity: 1,
+            //     alternatives: [
+            //         { name: "普通預售單日", price: "650", }
+            //     ]
+            // },
+            // {
+            //     name: "普通預售三日",
+            //     price: "1600",
+            //     quantity: 1,
+            //     alternatives: [
+            //     ]
+            // },
         ];
         // 任務清單
         const tasks = {
@@ -210,6 +219,12 @@
             return isAvailable;
         }
 
+        // 檢查票券是否可購買
+        function isTicketPurchasable(element) {
+            const quantityElement = element.querySelector('.ticket-quantity input[type="text"]');
+            return quantityElement !== null;
+        }
+
         // 勾選同意條款
         function checkAgreement() {
             updateTaskGroupStatus('agreement', 'running');
@@ -260,7 +275,7 @@
             }
         }
 
-        // 檢查並選擇票種
+        // 檢查並選擇票種，或標記尚未開賣的目標票種
         function selectTickets() {
             updateTaskGroupStatus('ticket', 'running');
             console.log('開始檢查票種...');
@@ -271,9 +286,50 @@
             // 先勾選同意條款
             checkAgreement();
 
+            // 重置所有票券名稱的顏色 (移除紅色標記)
+            document.querySelectorAll('.ticket-name').forEach(element => {
+                element.style.color = '';
+            });
+
             targetTickets.forEach(target => {
                 console.log('處理目標票種:', target.name);
                 let found = false;
+                let targetFound = false;
+
+                // 首先檢查所有票券以找到目標票種，無論是否可購買
+                const allPossibleTickets = Array.from(ticketElements).filter(el => {
+                    // 獲取票券名稱，優先使用 .small.text-muted 中的文字
+                    const ticketNameElement = el.querySelector('.small.text-muted') || el.querySelector('.ticket-name');
+                    const ticketName = ticketNameElement?.textContent.trim();
+                    const ticketPrice = el.querySelector('.ticket-price')?.textContent.trim();
+
+                    // 檢查是否是目標票種
+                    if (ticketName === target.name &&
+                        ticketPrice.replaceAll(',', '').includes(`TWD$${target.price.replaceAll(',', '')}`)) {
+                        targetFound = true;
+
+                        // 如果找到目標票種但無法購買，將其標記為紅色
+                        if (!isTicketPurchasable(el)) {
+                            const nameElement = el.querySelector('.ticket-name');
+                            if (nameElement) {
+                                console.log('找到目標票種但尚未開賣，標記為紅色:', ticketName);
+                                nameElement.style.color = 'red';
+                            }
+                            // 如果找到 .small.text-muted 也將其標記為紅色
+                            const smallTextElement = el.querySelector('.small.text-muted');
+                            if (smallTextElement) {
+                                smallTextElement.style.color = 'red';
+                            }
+                        }
+                        return true;
+                    }
+                    return false;
+                });
+
+                // 如果找到目標票種，無論是否可購買，記錄下來
+                if (allPossibleTickets.length > 0) {
+                    console.log('已找到目標票種:', target.name, '數量:', allPossibleTickets.length);
+                }
 
                 // 先嘗試選擇主要目標票種
                 updateTaskStatus('ticket', 1, 'running');
@@ -290,7 +346,8 @@
                     });
                     return ticketName === target.name &&
                         ticketPrice.replaceAll(',', '').includes(`TWD$${target.price.replaceAll(',', '')}`) &&
-                        checkTicketStatus(el);
+                        checkTicketStatus(el) &&
+                        isTicketPurchasable(el);
                 });
 
                 if (mainTicket) {
@@ -314,6 +371,40 @@
                     updateTaskStatus('ticket', 2, 'running');
                     for (const alt of target.alternatives) {
                         console.log('嘗試替代票種:', alt);
+
+                        // 檢查替代票種是否存在，無論是否可購買
+                        const allAltTickets = Array.from(ticketElements).filter(el => {
+                            const ticketNameElement = el.querySelector('.small.text-muted') || el.querySelector('.ticket-name');
+                            const ticketName = ticketNameElement?.textContent.trim();
+                            const ticketPrice = el.querySelector('.ticket-price')?.textContent.trim();
+
+                            if (ticketName === alt.name &&
+                                ticketPrice.replaceAll(',', '').includes(`TWD$${alt.price.replaceAll(',', '')}`)) {
+
+                                // 如果找到替代票種但無法購買，將其標記為紅色
+                                if (!isTicketPurchasable(el)) {
+                                    const nameElement = el.querySelector('.ticket-name');
+                                    if (nameElement) {
+                                        console.log('找到替代票種但尚未開賣，標記為紅色:', ticketName);
+                                        nameElement.style.color = 'red';
+                                    }
+                                    // 如果找到 .small.text-muted 也將其標記為紅色
+                                    const smallTextElement = el.querySelector('.small.text-muted');
+                                    if (smallTextElement) {
+                                        smallTextElement.style.color = 'red';
+                                    }
+                                }
+                                return true;
+                            }
+                            return false;
+                        });
+
+                        if (allAltTickets.length > 0) {
+                            console.log('已找到替代票種:', alt.name, '數量:', allAltTickets.length);
+                            targetFound = true;
+                        }
+
+                        // 嘗試選擇可購買的替代票種
                         const altTicket = Array.from(ticketElements).find(el => {
                             // 獲取票券名稱，優先使用 .small.text-muted 中的文字
                             const ticketNameElement = el.querySelector('.small.text-muted') || el.querySelector('.ticket-name');
@@ -321,7 +412,8 @@
                             const ticketPrice = el.querySelector('.ticket-price')?.textContent.trim();
                             return ticketName === alt.name &&
                                 ticketPrice.replaceAll(',', '').includes(`TWD$${alt.price.replaceAll(',', '')}`) &&
-                                checkTicketStatus(el);
+                                checkTicketStatus(el) &&
+                                isTicketPurchasable(el);
                         });
 
                         if (altTicket) {
