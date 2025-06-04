@@ -2,7 +2,7 @@
 // @name         GD Fans
 // @namespace    http://tampermonkey.net/
 // @version      0.1
-// @description  auto select ticket 
+// @description  auto select ticket
 // @author       Your name
 // @match        https://kktix.com/events/58652d0a/registrations/new
 // @match        https://kktix.com/events/rklrwd/registrations/new
@@ -12,6 +12,86 @@
 (function () {
     'use strict';
 
+    // 要攔截的網域列表
+    const blockedDomains = [
+        'clarity.ms',
+        'c.clarity.ms',
+        'www.clarity.ms',
+        'd.clarity.ms',
+        'd31qbv1cthcecs.cloudfront.net', // Alexa 追蹤
+        'atrk.js'
+    ];
+
+    // 檢查 URL 是否包含被封鎖的域名
+    function isBlockedUrl(url) {
+        if (!url || typeof url !== 'string') return false;
+        return blockedDomains.some(domain => url.includes(domain));
+    }
+
+    // 攔截 Fetch 請求
+    const originalFetch = window.fetch;
+    if (originalFetch) {
+        window.fetch = function (url, options) {
+            if (isBlockedUrl(url)) {
+                console.log('已攔截追蹤請求:', url);
+                return new Promise(resolve => {
+                    resolve(new Response('', {
+                        status: 200,
+                        statusText: 'OK'
+                    }));
+                });
+            }
+            return originalFetch.apply(this, arguments);
+        };
+    }
+
+    // 攔截 XMLHttpRequest
+    const originalXHROpen = XMLHttpRequest.prototype.open;
+    XMLHttpRequest.prototype.open = function () {
+        if (arguments[1] && isBlockedUrl(arguments[1])) {
+            console.log('已攔截 XHR 追蹤請求:', arguments[1]);
+            arguments[1] = 'data:text/plain,';
+        }
+        return originalXHROpen.apply(this, arguments);
+    };
+
+    // 攔截腳本
+    const originalCreateElement = document.createElement;
+    document.createElement = function (tagName) {
+        const element = originalCreateElement.apply(document, arguments);
+        if (tagName.toLowerCase() === 'script') {
+            const originalSetter = Object.getOwnPropertyDescriptor(element, 'src').set;
+            Object.defineProperty(element, 'src', {
+                set(value) {
+                    if (isBlockedUrl(value)) {
+                        console.log('已攔截追蹤腳本:', value);
+                        value = 'data:text/plain,';
+                    }
+                    originalSetter.call(this, value);
+                },
+                get: Object.getOwnPropertyDescriptor(element, 'src').get
+            });
+        }
+        return element;
+    };
+
+    // 攔截圖片請求 (常用於追蹤)
+    const originalImage = window.Image;
+    window.Image = function () {
+        const image = new originalImage(...arguments);
+        const originalSetter = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src').set;
+        Object.defineProperty(image, 'src', {
+            set(value) {
+                if (isBlockedUrl(value)) {
+                    console.log('已攔截追蹤圖片請求:', value);
+                    value = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'; // 1x1透明GIF
+                }
+                originalSetter.call(this, value);
+            },
+            get: Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src').get
+        });
+        return image;
+    };
 
     // 套用自動選票網址
     const kktixSelectTicket = [
