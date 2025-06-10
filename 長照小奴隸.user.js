@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         長照小奴隸
 // @namespace    http://tampermonkey.net/
-// @version      0.1
+// @version      0.2
 // @description  努力打工的小奴隸
 // @author       DDian
 // @match        https://csms.mohw.gov.tw/lcms/*
